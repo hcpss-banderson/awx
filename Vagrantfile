@@ -5,7 +5,9 @@ Vagrant.configure("2") do |config|
 
   config.vm.box = "ubuntu/focal64"
   config.vm.network "private_network", ip: "192.168.33.10"
+  #config.vm.network "forwarded_port", guest: 80, host: 8080
   config.vm.synced_folder "./app", "/app"
+  config.vm.synced_folder "./provision", "/provision"
 
   config.vm.provider "virtualbox" do |vb|
     vb.gui = false
@@ -15,20 +17,19 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     apt-get update
-    apt-get install -y docker docker-compose
-    curl -LO https://github.com/kubernetes/minikube/releases/download/v1.22.0/minikube_1.22.0-0_amd64.deb
-    dpkg -i minikube_1.22.0-0_amd64.deb
-    usermod -aG docker vagrant
+    apt-get install -y python3-pip
+    pip3 install ansible
   SHELL
 
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    ansible-galaxy install -r /provision/requirements.yml
+    ansible-playbook /provision/install.yaml
+
     newgrp docker <<HERE
-      minikube delete
-      minikube start --addons=ingress --cpus=4 --cni=flannel --install-addons=true --kubernetes-version=stable --memory=6g
-      sleep 1m
-      minikube kubectl -- apply -f https://raw.githubusercontent.com/ansible/awx-operator/0.13.0/deploy/awx-operator.yaml
-      sleep 1m
-      minikube kubectl -- apply -f /app/awx-demo.yml
+      ansible-playbook /provision/run.yaml
+      echo "Username: admin"
+      printf "Password: "
+      minikube kubectl -- get secret awx-demo-admin-password --output jsonpath="{.data.password}" | base64 --decode
 HERE
   SHELL
 end

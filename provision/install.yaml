@@ -1,0 +1,53 @@
+---
+- name: "Playing with Ansible and Git"
+  hosts: localhost
+  become: no
+  connection: local
+
+  roles:
+    - role: nvjacobo.caddy
+      become: yes
+
+  tasks:
+    - name: "install docker"
+      apt:
+        name: "{{ item }}"
+        update_cache: yes
+      with_items:
+        - docker
+        - docker-compose
+      become: yes
+
+    - name: "Install Minikube"
+      apt:
+        deb: https://github.com/kubernetes/minikube/releases/download/v1.22.0/minikube_1.22.0-0_amd64.deb
+      become: yes
+
+    - name: add user to docker group
+      ansible.builtin.user:
+        name: vagrant
+        group: docker
+        #append: yes
+      become: yes
+
+    - name: Add serve alias for foo user
+      lineinfile:
+        path: /home/vagrant/.bashrc
+        line: "alias kubectl='minikube kubectl --'"
+
+    - name: reset ssh connection to allow user changes to affect ansible user
+      ansible.builtin.meta:
+        reset_connection
+
+    - name: 'Start using the docker group'
+      command: newgrp docker
+
+    - name: 'Install AWC-CLI'
+      pip:
+        name: https://releases.ansible.com/ansible-tower/cli/ansible-tower-cli-latest.tar.gz
+        extra_args: --user
+
+    - name: Add pip packages to the path
+      lineinfile:
+        path: /home/vagrant/.bashrc
+        line: 'export PATH="$PATH:/home/vagrant/.local/bin"'
