@@ -27,17 +27,12 @@
       ansible.builtin.user:
         name: vagrant
         group: docker
-        #append: yes
       become: yes
 
     - name: Add serve alias for foo user
       lineinfile:
         path: /home/vagrant/.bashrc
         line: "alias kubectl='minikube kubectl --'"
-
-    - name: reset ssh connection to allow user changes to affect ansible user
-      ansible.builtin.meta:
-        reset_connection
 
     - name: 'Start using the docker group'
       command: newgrp docker

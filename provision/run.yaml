@@ -5,17 +5,32 @@
   connection: local
 
   tasks:
+    # This is kind of a hacky way to figure out whether the AWX application is
+    # running.
+    - name: 'Figure out if AWX is already running'
+      command: 'minikube kubectl -- get pods --namespace=default --output=name'
+      register: awx_pods
+      ignore_errors: yes
+
+    - name: 'Set fact about AWX state'
+      set_fact:
+        awx_running: "{{ awx_pods.stdout_lines|length >= 3 }}"
+
     - name: 'Delete any minikube clusters that might be running'
       command: minikube delete
+      when: not awx_running
 
     - name: 'Start our minikube cluster'
       command: minikube start --addons=ingress --cpus=4 --cni=flannel --install-addons=true --kubernetes-version=stable --memory=6g
+      when: not awx_running
 
     - name: 'Start the AWX operator'
       command: minikube kubectl -- apply -f https://raw.githubusercontent.com/ansible/awx-operator/0.13.0/deploy/awx-operator.yaml
+      when: not awx_running
 
     - name: 'Start the AWX application'
       command: minikube kubectl -- apply -f /app/awx-demo.yml
+      when: not awx_running
 
     - name: Monitor the AWX startup
       command:
@@ -24,6 +39,7 @@
       until: "'TASK [installer : Cleanup & Set garbage collection refs] ***********************' in awx_status.stdout_lines"
       retries: 30 # This can take a while
       delay: 30
+      when: not awx_running
 
     - name: 'Determin the ip and port of the AWX application'
       command: minikube service awx-demo-service --url
@@ -55,25 +71,3 @@
         - "export TOWER_HOST=http://localhost"
         - "export TOWER_USERNAME=admin"
         - "export TOWER_PASSWORD={{ awx_password.stdout }}"
-
-
-    # - name: 'Create AWX configuration directory'
-    #   file:
-    #     path: /etc/awx
-    #     state: directory
-    #   become: yes
-
-    # - name: 'Configure AWX CLI'
-    #   template:
-    #     src: "/provision/templates/awx_cli.j2"
-    #     dest: "{{ item }}"
-    #   vars:
-    #     password: "{{ awx_password.stdout }}"
-    #   become: yes
-    #   with_items:
-    #     - /etc/awx/tower_cli.cfg
-    #     - /root/tower_cli.cfg
-    #     - /home/vagrant/tower_cli.cfg
-    #     - /etc/awx/awx_cli.cfg
-    #     - /root/awx_cli.cfg
-    #     - /home/vagrant/awx_cli.cfg
