@@ -47,7 +47,7 @@
 
     - name: 'Write the Caddyfile'
       template:
-        src: "/provision/templates/Caddyfile.j2"
+        src: "/provision/awx/templates/Caddyfile.j2"
         dest: "/etc/caddy/Caddyfile"
       vars:
         proxy: "{{ service_url.stdout|regex_replace('http://'|regex_escape(), '') }}"

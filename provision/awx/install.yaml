@@ -46,3 +46,15 @@
       lineinfile:
         path: /home/vagrant/.bashrc
         line: 'export PATH="$PATH:/home/vagrant/.local/bin"'
+
+    - name: Generate an OpenSSH keypair with the default values (4096 bits, rsa)
+      openssh_keypair:
+        path: /home/vagrant/.ssh/id_rsa
+        owner: vagrant
+        group: vagrant
+
+    - name: Fix owner of the generated pub key
+      file:
+        path: /home/vagrant/.ssh/id_rsa.pub
+        owner: vagrant
+        group: vagrant

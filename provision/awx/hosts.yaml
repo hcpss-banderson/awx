@@ -1,0 +1,11 @@
+---
+- name: "Add entry to the hosts file"
+  hosts: localhost
+  become: yes
+  connection: local
+
+  tasks:
+    - name: "Add entry to the hosts file"
+      lineinfile:
+        line: "{{ minion_ip }} {{ minion_host }}"
+        path: /etc/hosts
